@@ -6,11 +6,13 @@ class Game:
 
     def reset(self):
         self.done = False
+        self.num_actions = 7
         self.board = np.zeros((6,7))
         self.turn = "red"
 
     def move(self, column):
         if column > 6 or column < 0:
+            self.done = True
             return -999 # invalid move
 
         if self.turn == "red":
@@ -29,6 +31,7 @@ class Game:
                 reward = self.check_win(5-i, column, action)
                 return reward
 
+        self.done = True
         return -999 # invalid move
 
     def check_win(self, row, column, action):

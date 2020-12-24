@@ -37,40 +37,28 @@ class Agent:
             return load_model(model_path)
 
         model = Sequential()
-        model.add(Reshape((384,), input_shape=self.input_dimensions))
+        model.add(Dense(64, input_shape=self.input_dimensions))
         model.add(Activation('relu'))
-        model.add(Dropout(0.1))
+        model.add(Dropout(0.2))
 
         model.add(Dense(128))
         model.add(Activation('relu'))
-        model.add(Dropout(0.1))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(32))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
 
         model.add(Dense(self.output_dimensions))
         model.add(Activation('linear'))
 
         model.compile(loss='mse', optimizer=Adam(lr=0.001), metrics=['accuracy'])
 
-        """
-        optimizer = SGD(lr=0.01, momentum=0.0, decay=0.0, nesterov=False)
-        input_layer = Input(shape=(6, 8, 8), name='board_layer')
-        inter_layer_1 = Conv2D(1, (1, 1), data_format="channels_first")(input_layer)  # 1,8,8
-        inter_layer_2 = Conv2D(1, (1, 1), data_format="channels_first")(input_layer)  # 1,8,8
-        flat_1 = Reshape(target_shape=(1, 64))(inter_layer_1)
-        flat_2 = Reshape(target_shape=(1, 64))(inter_layer_2)
-        output_dot_layer = Dot(axes=1)([flat_1, flat_2])
-        output_layer = Reshape(target_shape=(4096,))(output_dot_layer)
-        model = Model(inputs=[input_layer], outputs=[output_layer])
-        model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
-        """
         model.summary()
         return model
 
     def get_action(self, state):
-        state = np.reshape(state, (1,6,8,8))
-        prediction = self.model.predict(state)
-        prediction = np.reshape(prediction[0], (64,64))
-        move_from, move_to = np.unravel_index(prediction.argmax(), prediction.shape)
-        return (move_from, move_to)
+        return np.argmax(self.model.predict(state.reshape(-1,state.shape[0])))
 
     def train(self, env_info):
         #env info: (state, action, new_state, reward, done)
@@ -85,10 +73,10 @@ class Agent:
         #build batch from replay_mem
         batch = random.sample(self.replay_memory, self.batch_size)
         #get output from network given state as input
-        states = np.array([elem[0].tolist() for elem in batch])
+        states = np.array([elem[0] for elem in batch])
         current_q_vals = self.model.predict(states)
         #predict future q (using other network) with new state
-        new_states = np.array([elem[2].tolist() for elem in batch])
+        new_states = np.array([elem[2] for elem in batch])
         future_q_vals = self.stable_pred_model.predict(new_states)
         #NOTE: its better to predict on full batch of states at once
         #   predicting gets vectorized :)
@@ -99,24 +87,22 @@ class Agent:
         #network will train to fit to qvals
         #this will fit the network towards states with better rewards
         #   (taking into account future rewards while doing so)
-        current_q_vals = np.reshape(current_q_vals, (len(batch), 64, 64))
-        future_q_vals = np.reshape(future_q_vals, (len(batch), 64, 64))
 
         for i, (state, action, new_state, reward, done) in enumerate(batch):
             #update q vals for action taken from state appropiately
             #if finished playing (win or lose), theres no future reward
             if done:
-                current_q_vals[i][action[0]][action[1]] = reward
+                current_q_vals[i][action] = reward
             else:
                 #chose best action in new state
                 optimal_future_q = np.max(future_q_vals[i])
 
                 #Q-learning! :)
-                current_q_vals[i][action[0]][action[1]] = reward + self.discount * optimal_future_q
+                current_q_vals[i][action] = reward + self.discount * optimal_future_q
 
 
             X.append(state)
-            y.append(np.reshape(current_q_vals[i], (4096,)))
+            y.append(current_q_vals)
 
         self.model.fit(np.array(X), np.array(y), batch_size=self.batch_size, shuffle=False, verbose=0)
 
