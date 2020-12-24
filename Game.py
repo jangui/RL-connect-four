@@ -2,13 +2,14 @@ import numpy as np
 
 class Game:
     def __init__(self):
+        self.num_actions = 7
         self.reset()
 
     def reset(self):
         self.done = False
-        self.num_actions = 7
         self.board = np.zeros((6,7))
         self.turn = "red"
+        self.moves = 0
 
     def move(self, column):
         if column > 6 or column < 0:
@@ -25,11 +26,16 @@ class Game:
         # check where to place piece in column
         for i in range(6):
             pos = self.board[5-i][column]
-            if pos == 0: # if empty spot place
+            # make move if empty spot
+            if pos == 0:
                 self.board[5-i][column] = action
                 # check if move was a winning move
                 reward = self.check_win(5-i, column, action)
+                self.moves += 1
+                if self.moves == 42: # end game if board filled
+                    self.done = True
                 return reward
+
 
         self.done = True
         return -999 # invalid move

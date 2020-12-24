@@ -75,10 +75,14 @@ def main():
                 agent2.epsilon = max(agent2.epsilon, agent2.min_epsilon)
 
         if render and (episode % render_period == 0):
+            last_turn = "red"
+            if game.turn == "red":
+                last_turn = "yellow"
+
             if reward == -999:
-                print(f"Invalid move by {game.turn}")
+                print(f"Invalid move by {last_turn}")
             elif reward == 999:
-                print(f"{game.turn} wins!")
+                print(f"{last_turn} wins!")
 
         if episode % 1000 == 0:
             agent.model.save(f"./q/red{episode}autosave")
