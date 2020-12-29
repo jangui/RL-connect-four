@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential, load_model, Model
 from tensorflow.keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, Reshape, Input, Dot
 from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow import convert_to_tensor
 from collections import deque
 import numpy as np
 import random
@@ -13,10 +14,9 @@ class Agent:
         self.min_replay_len = 1000
         self.update_pred_model_period = 5
         self.epsilon = 1
-        self.epsilon_decay = 0.999975
-        self.min_epsilon = 0.1
+        self.epsilon_decay = 0.99975
+        self.min_epsilon = 0.01
         self.discount = 0.99
-        self.success_margin = 1000
         self.input_dimensions = input_dimensions
         self.output_dimensions = output_dimensions
         self.replay_memory = deque(maxlen=self.replay_mem_size)
@@ -37,7 +37,24 @@ class Agent:
             return load_model(model_path)
 
         model = Sequential()
-        model.add(Dense(64, input_shape=self.input_dimensions))
+        model.add(Flatten(input_shape=self.input_dimensions))
+        model.add(Dense(128))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(256))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(512))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(512))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(256))
         model.add(Activation('relu'))
         model.add(Dropout(0.2))
 
@@ -45,7 +62,7 @@ class Agent:
         model.add(Activation('relu'))
         model.add(Dropout(0.2))
 
-        model.add(Dense(32))
+        model.add(Dense(64))
         model.add(Activation('relu'))
         model.add(Dropout(0.2))
 
@@ -58,7 +75,8 @@ class Agent:
         return model
 
     def get_action(self, state):
-        return np.argmax(self.model.predict(state.reshape(-1,state.shape[0])))
+        state = state.reshape(-1, state.shape[0], state.shape[1])
+        return np.argmax(self.model.predict(state))
 
     def train(self, env_info):
         #env info: (state, action, new_state, reward, done)
@@ -74,10 +92,10 @@ class Agent:
         batch = random.sample(self.replay_memory, self.batch_size)
         #get output from network given state as input
         states = np.array([elem[0] for elem in batch])
-        current_q_vals = self.model.predict(states)
+        current_q_vals = self.model.predict(states, batch_size=self.batch_size)
         #predict future q (using other network) with new state
         new_states = np.array([elem[2] for elem in batch])
-        future_q_vals = self.stable_pred_model.predict(new_states)
+        future_q_vals = self.stable_pred_model.predict(new_states, batch_size=self.batch_size)
         #NOTE: its better to predict on full batch of states at once
         #   predicting gets vectorized :)
 
@@ -94,7 +112,7 @@ class Agent:
             if done:
                 current_q_vals[i][action] = reward
             else:
-                #chose best action in new state
+                #get highest q val in future state
                 optimal_future_q = np.max(future_q_vals[i])
 
                 #Q-learning! :)

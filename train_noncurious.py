@@ -1,21 +1,21 @@
 import random
 
+from tensorflow import reshape
 from Agent import Agent
 from Game import Game
 
 def main():
     game = Game()
-    input_dimensions = game.board.shape[0] * game.board.shape[1]
-    agent = Agent((input_dimensions,), game.num_actions, model_path=None)
-    agent2 = Agent((input_dimensions,), game.num_actions, model_path=None)
+    agent = Agent(game.board.shape, game.num_actions, model_path=None)
+    agent2 = Agent(game.board.shape, game.num_actions, model_path=None)
 
-    episodes = 100000
-    render_period = 1000
+    episodes = 20000
+    render_period = 200
     render = True
 
     for episode in range(episodes):
         if render and (episode % render_period == 0):
-            print(f"Game #{episode}")
+            print(f"Noncurious Game #{episode}")
         reward = 0
         game.reset()
         state = game.board
@@ -27,41 +27,66 @@ def main():
             else:
                 #preform action based off network prediction
                 #as episilon decays this will be the usual option
-                action = agent.get_action(state.flatten())
+                action = agent.get_action(state)
 
-            reward = game.move(action)
+            reward, win = game.move(action)
             done = game.done
             new_state = game.board
 
+            # check if opponents next move is winning, if so update reward
+            if not done:
+                action = agent2.get_action(new_state)
+                _, win = game.test_move(action)
+                if win:
+                    reward = -999
+
             # train
-            env_info = (state.flatten(), action, new_state.flatten(), reward, done)
+            env_info = (state, action, new_state, reward, done)
             agent.train(env_info)
 
             # render
             if render and (episode % render_period == 0):
                 print(game, "\n")
+                if done and win:
+                    print("red wins")
+                elif done:
+                    print("invalid move by red:", action)
+
 
             # opponent moves
             if not done:
+                state = new_state
                 if agent2.epsilon > random.random():
                     #preform random move
                     action = random.randint(0, game.num_actions-1)
                 else:
                     #preform action based off network prediction
                     #as episilon decays this will be the usual option
-                    action = agent.get_action(state.flatten())
+                    action = agent2.get_action(state)
 
-                reward = game.move(action)
+                reward, win = game.move(action)
                 done = game.done
                 new_state = game.board
 
+                # check if opponents next move is winning, if so update reward
+                if not done:
+                    action = agent.get_action(new_state)
+                    _, win = game.test_move(action)
+                    if win:
+                        reward = -999
+
                 # train
-                env_info = (state.flatten(), action, new_state.flatten(), reward, done)
+                env_info = (state, action, new_state, reward, done)
                 agent2.train(env_info)
 
                 # render
                 if render and (episode % render_period == 0):
                     print(game, "\n")
+                    if done and win:
+                        print("yellow wins")
+                    elif done:
+                        print("invalid move by yellow:", action)
+
 
             state = new_state
 
@@ -74,15 +99,6 @@ def main():
                 agent2.epsilon *= agent2.epsilon_decay
                 agent2.epsilon = max(agent2.epsilon, agent2.min_epsilon)
 
-        if render and (episode % render_period == 0):
-            last_turn = "red"
-            if game.turn == "red":
-                last_turn = "yellow"
-
-            if reward == -999:
-                print(f"Invalid move by {last_turn}")
-            elif reward == 999:
-                print(f"{last_turn} wins!")
 
         if episode % 1000 == 0:
             agent.model.save(f"./q/red{episode}autosave")
