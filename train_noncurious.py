@@ -6,8 +6,8 @@ from Game import Game
 
 def main():
     game = Game()
-    agent = Agent(game.board.shape, game.num_actions, model_path=None)
-    agent2 = Agent(game.board.shape, game.num_actions, model_path=None)
+    agent = Agent(game.board.shape, game.num_actions, model_path="./q/red2.3")
+    agent2 = Agent(game.board.shape, game.num_actions, model_path="./q/yellow2.3")
 
     episodes = 20000
     render_period = 200

@@ -14,7 +14,8 @@ class Agent:
         self.min_replay_len = 1000
         self.update_pred_model_period = 5
         self.epsilon = 1
-        self.epsilon_decay = 0.99975
+        #self.epsilon_decay = 0.99975
+        self.epsilon_decay = 0.9999
         self.min_epsilon = 0.01
         self.discount = 0.99
         self.input_dimensions = input_dimensions

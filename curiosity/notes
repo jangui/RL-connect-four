@@ -1,0 +1,15 @@
+2.0 - 5000 iters
+    - towers being build, not any blocking really
+2.1 - 5000 iters
+    - yellow mostly winning
+        - red hasn't learned to block?
+            - yellow isnt really blocking tho
+            - lets hope red just struggling with some learning curve
+2.2 - 2000 iters
+        - red is making blocking moves sometimes
+2.3 3000 iters
+    - yellow wins lots more
+2.4 5000 iters
+    - yellow can block sometimes
+    - red hasn't learned to overcome that yet
+

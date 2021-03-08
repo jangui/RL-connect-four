@@ -11,13 +11,13 @@ def main():
 
     curiosity_dim = game.board.shape[0] * game.board.shape[1]
 
-    agent = Agent(game.board.shape, game.num_actions, model_path=None)
-    curiosity = Curiosity((curiosity_dim,), curiosity_dim, model_path=None)
-    agent2 = Agent(game.board.shape, game.num_actions, model_path=None)
-    curiosity2 = Curiosity((curiosity_dim,), curiosity_dim, model_path=None)
+    agent = Agent(game.board.shape, game.num_actions, model_path="./curiosity/red2.5")
+    curiosity = Curiosity((curiosity_dim,), curiosity_dim, model_path="./curiosity/red_curiosity2.5")
+    agent2 = Agent(game.board.shape, game.num_actions, model_path="./curiosity/yellow2.5")
+    curiosity2 = Curiosity((curiosity_dim,), curiosity_dim, model_path="./curiosity/yellow_curiosity2.5")
 
     episodes = 100000
-    render_period = 200
+    render_period = 50
     render = True
 
     for episode in range(episodes):

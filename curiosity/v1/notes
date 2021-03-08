@@ -1,0 +1,58 @@
+1.0 - 3000 iterations
+    - mostly towers, occasional blocks
+1.1 - 4000 iterations
+    - more than one tower attempted to be built
+1.2 - 3000 iters
+    - more blocking
+    
+1.3 - 3000 iters
+    - same stuff
+
+1.4 - 3000 iters
+    - red wins much more than yellow
+        - yellow not takinig winning moves
+
+model:
+
+    model = Sequential()
+    model.add(Dense(128, input_shape=self.input_dimensions))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(256))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(128))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(64))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(self.output_dimensions))
+    model.add(Activation('linear'))
+
+curiosity:
+
+        model = Sequential()
+        model.add(Dense(128, input_shape=self.input_dimensions))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(256))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(128))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(self.output_dimensions))
+        model.add(Activation('linear'))
+
+        model.compile(loss='mse', optimizer=Adam(lr=0.001), metrics=['accuracy'])
+
+        model.summary()
+        return model
