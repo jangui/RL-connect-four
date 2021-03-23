@@ -24,7 +24,7 @@ class Game:
 
     # check if board is full
     def is_full(self, board=None):
-        if not board:
+        if type(board) == type(None):
             board = self.board
 
         for c in range(7):
@@ -32,8 +32,10 @@ class Game:
                 return False
         return True
 
-    def move(self, column, test=False):
-        turn = self.turn
+    def move(self, column, board=None, test=False):
+        if type(board) == type(None):
+            board = self.board
+
         if self.turn == "red":
             action = 1
             if not test:
@@ -45,22 +47,24 @@ class Game:
 
         # check where to place piece in column (because gravity effects connect 4)
         for i in range(6):
-            pos = self.board[5-i][column]
+            pos = board[5-i][column]
             # make move in 'highest' empty spot
             if pos == 0:
                 if test: # don't modify actual game state
-                    board = copy.deepcopy(self.board)
-                    board[5-i][column] = action
-                    return board
-                self.board[5-i][column] = action
+                    board_copy = copy.deepcopy(board)
+                    board_copy[5-i][column] = action
+                    return board_copy
+                board[5-i][column] = action
+                self.board = board
                 return self.board
 
         # end game if board filled
         if self.is_full():
             self.done = True
+        return self.board
 
     def check_win(self, board=None, test=False):
-        if not board:
+        if type(board) == type(None):
             board = self.board
 
         # check if last piece caused a win
@@ -96,7 +100,7 @@ class Game:
         return False
 
 
-    def check_win_column(self):
+    def check_win_column(self, board):
         # count how consecutive pieces in each row
         for c in range(0, 7): # iterate columns
             count = 0
@@ -114,7 +118,7 @@ class Game:
 
         return False
 
-    def check_win_diagonal(self):
+    def check_win_diagonal(self, board):
         # check diagonal top left to bottom right
         for r in range(3):
             for c in range(4):

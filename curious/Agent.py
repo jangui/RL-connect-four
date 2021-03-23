@@ -35,17 +35,16 @@ class Agent:
         action = np.argmax(self.q_values)
         return action
 
-    def get_next_action(self, state):
+    def get_next_action(self):
         first_choice = np.argmax(self.q_values)
         self.q_values[first_choice] = -math.inf
-        while True:
-            next_choice = np.argmax(self.q_values)
-            if next_choice = -math.inf:
-                return None
-            yield next_choice
-            self.q_values[next_choice] = -math.inf
+        next_choice = np.argmax(self.q_values)
+        if math.isinf(self.q_values[next_choice]):
+            return None
+        return next_choice
 
     def train(self, training_data_list):
+        #TODO fix batch size problem
         """
         Function for training the network.
         Arguemnts:
@@ -68,7 +67,7 @@ class Agent:
         states = [elem[0] for elem in training_data_list]
 
         # get all q values for all states in training data list
-        current_q_vals = self.model.predict(states)
+        current_q_vals = self.model.predict(np.array(states))
 
         # for each training data in the list
         #   find new q value
@@ -77,7 +76,7 @@ class Agent:
             if done:
                 new_q_val = reward
             else:
-                max_future_q_val = max(self.model.predict((new_state)))
+                max_future_q_val = max(self.model.predict(new_state)[0])
                 new_q_val = reward + self.discount * max_future_q_val
 
             # update current state's q values with the new q value for action taken
@@ -87,7 +86,7 @@ class Agent:
             y.append(current_q_vals[i])
 
         # train! :)
-        self.model.fit(X, y, verbose=0)
+        self.model.fit(np.array(X), np.array(y), verbose=0)
 
 
 class Curiosity:
@@ -125,6 +124,6 @@ class Curiosity:
         for (state, new_state) in training_data_list:
             X.append(state)
             y.append(new_state)
-        self.model.fit(X, y, verbose=0)
+        self.model.fit(np.array(X), np.array(y), verbose=0)
 
 
