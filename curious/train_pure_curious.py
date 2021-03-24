@@ -1,18 +1,7 @@
 from Agent import Agent, Curiosity
 from Game import Game
-import sys
 
 def main():
-    try:
-        env_reward = float(sys.argv[1])
-    except:
-        env_reward = 1.0
-
-    try:
-        save_loc = "./models/" + sys.arg[2]
-    except:
-        save_loc = "./models/autosave/"
-
     agents = [Agent(), Agent()]
     curiosity = [Curiosity(), Curiosity()]
 
@@ -24,10 +13,9 @@ def main():
     render = True
 
     for episode in range(1, episodes+1):
-        print(f"Curiosity Game #{episode}")
+        print(f"Pure Curiosity Game #{episode}")
         game.reset()
         agent = 0
-        winner = None
 
         training_data = [[], []]
 
@@ -42,14 +30,11 @@ def main():
                 action = agents[agent].get_next_action()
 
             new_state = game.move(action)
+            game.check_win()
 
             if render and ((episode % render_period) == 0):
                 print(new_state)
                 print(f"action taken: {action}")
-
-            # check if agent won
-            if game.check_win():
-                winner = agent
 
             # calculate curiousity reward
             c_reward = curiosity_reward(game, new_state, agent, agents, curiosity)
@@ -62,50 +47,19 @@ def main():
             # swap to next agent
             agent = (agent + 1) % 2
 
-        # after game is finished train agents
-        train_models(winner, agents, training_data, env_reward)
-
-        # train each curiosity module
-        # training data was added when curiosity reward was calculated
-        curiosity[0].train()
-        curiosity[1].train()
-
-        # autosave
-        if episode % autosave_period == 0:
-            agents[0].model.save(save_loc + f"red{episode}")
-            curiosity[0].model.save(save_loc + f"red_curiosity{episode}")
-            agents[1].model.save(save_loc + f"yellow{episode}")
-            curiosity[1].model.save(save_loc + f"yellow_curiosity{episode}")
-    return
-
-def train_models(winner, agents, training_data, env_reward):
-    # if no winner, train solely based on curiosity reward
-    if winner == None:
+        # train models
         for agent in range(2):
             for data in training_data[agent]:
                 agents[agent].add_data(data)
             agents[agent].train()
-        return
+            curiosity[agent].train()
 
-    # train winner
-    data = training_data[winner]
-
-    # add reward to every move that lead to win
-    reward_ind = 3
-    for i in range(len(data)):
-        data[i][reward_ind] += env_reward
-        # add data to model's replay mem for training
-        agents[winner].add_data(data[i])
-    agents[winner].train()
-
-    # train loser
-    loser = (winner + 1) % 2
-    data = training_data[loser]
-    # penalize losing move
-    data[-1][reward_ind] -= env_reward
-    # add data to replay mem and train
-    agents[loser].add_data(data[-1])
-    agents[loser].train()
+        # autosave
+        if episode % autosave_period == 0:
+            agents[0].model.save(f"./models/purecurious/autosave/red{episode}")
+            curiosity[0].model.save(f"./models/purecurious/autosave/red_curiosity{episode}")
+            agents[1].model.save(f"./models/purecurious/autosave/yellow{episode}")
+            curiosity[1].model.save(f"./models/purecurious/autosave/yellow_curiosity{episode}")
     return
 
 def curiosity_reward(game, new_state, agent, agents, curiosity):
