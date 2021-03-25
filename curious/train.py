@@ -3,11 +3,6 @@ from Game import Game
 import numpy as np
 import sys
 
-# TODO
-"""
-- change curiosity rewards to curiosity values only used when getting an action (added to q vals before argmax)
-"""
-
 def main():
     agents = [Agent(), Agent()]
     curiosity = [Curiosity(), Curiosity()]
@@ -116,6 +111,7 @@ def train_models(winner, agents, training_data):
     data[-1][reward_ind] -= 1
     # add data to replay mem and train
     agents[loser].add_data(data[-1])
+    agents[loser].add_priority_data(data[-1])
     agents[loser].train()
     return
 

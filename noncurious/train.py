@@ -89,6 +89,7 @@ def train_models(winner, agents, training_data):
     data[-1][reward_ind] = -1
     # add data to replay mem and train
     agents[loser].add_data(data[-1])
+    agents[loser].add_priority_data(data[-1])
     agents[loser].train()
 
 

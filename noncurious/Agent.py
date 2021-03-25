@@ -14,6 +14,7 @@ class Agent:
         self.minimum_replay_len = 150
         self.batch_size = 64
         self.replay_memory = deque(maxlen=self.replay_mem_size)
+        self.priority_memory = deque(maxlen=50)
         self.model = self.create_model(model_path)
 
     def create_model(self, model_path):
@@ -59,6 +60,9 @@ class Agent:
         #   done: game state (True/False if game finished or not)
         self.replay_memory.append(training_data)
 
+    def add_priority_data(self, training_data):
+        self.priority_memory.append(training_data)
+
     def train(self):
         """
         Function for training the network.
@@ -71,6 +75,11 @@ class Agent:
 
         #build batch from replay_mem
         batch = random.sample(self.replay_memory, self.batch_size)
+
+        # make sure every batch has a priority experience
+        if len(self.priority_memory) > 0:
+            priority_experience = random.choice(self.priority_memory)
+            batch[0] = priority_experience
 
         # used to fit model
         # X = state
