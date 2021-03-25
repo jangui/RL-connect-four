@@ -1,5 +1,6 @@
 from Agent import Agent, Curiosity
 from Game import Game
+import numpy as np
 
 def main():
     agents = [Agent(), Agent()]
@@ -24,7 +25,8 @@ def main():
 
             # preform action
             state = game.board
-            action = agents[agent].get_action(state)
+            curiosity_values = get_curiosity_values(agent, agents, curiosity, game)
+            action = agents[agent].get_action(state, curiosity_values)
             while not game.check_valid_move(action):
                 # get next prefered action from agent
                 action = agents[agent].get_next_action()
@@ -35,10 +37,6 @@ def main():
             if render and ((episode % render_period) == 0):
                 print(new_state)
                 print(f"action taken: {action}")
-
-            # calculate curiousity reward
-            c_reward = curiosity_reward(game, new_state, agent, agents, curiosity)
-            reward += c_reward
 
             # save data for training
             env_info = [state, action, new_state, reward, game.done]
@@ -62,41 +60,22 @@ def main():
             curiosity[1].model.save(f"./models/purecurious/autosave/yellow_curiosity{episode}")
     return
 
-def curiosity_reward(game, new_state, agent, agents, curiosity):
-    # calc curiosity reward
-    if not game.done:
-        rival = agents[(agent + 1) % 2]
-
-        # check if rival future action is valid
-        rival_future_action = rival.get_action(new_state)
-        while not game.check_valid_move(rival_future_action):
-            # get next prefered action from rival
-            rival_future_action = rival.get_next_action()
-
-        future_state = game.move(rival_future_action, test=True)
-        reward = curiosity[agent].calc_reward(new_state, future_state)
-
-        # add data for training
-        training_data = [new_state, future_state]
-        curiosity[agent].add_data(training_data)
-
-    else:
-        return 0
-
-    # if game can continue, calc future curiosity reward
-    if not game.is_full(future_state) and not game.check_win(future_state, test=True):
-
-        # check if future action is valid
-        future_action = agents[agent].get_action(future_state)
-        while not game.check_valid_move(future_action):
-            # get next prefered action from agent
-            future_action = agents[agent].get_next_action()
-
-        future_future_state = game.move(future_action, future_state, test=True)
-        future_reward = curiosity[agent].calc_reward(future_state, future_future_state)
-        reward += future_reward * agents[agent].discount
-
-    return reward
+def get_curiosity_values(agent, agents, curiosity, game):
+    # remember to train as well
+    rival = agents[(agent + 1) % 2]
+    curiosity_values = np.zeros((7))
+    # get curiosity value for each possible action
+    for i in range(7):
+        state = game.move(i, test=True)
+        if game.is_full(state) or game.check_win(state, test=True):
+            curiosity_values[i] = 0
+            continue
+        rival_action = rival.get_action(state)
+        new_state = game.move(rival_action, test=True)
+        curiosity[agent].add_data([state, new_state])
+        curiosity_value = curiosity[agent].calc_reward(state, new_state)
+        curiosity_values[i] = curiosity_value
+    return curiosity_values
 
 if __name__ == "__main__":
     main()

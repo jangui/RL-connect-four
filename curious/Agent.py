@@ -35,10 +35,12 @@ class Agent:
 
         return model
 
-    def get_action(self, state):
+    def get_action(self, state, curiosity_values=None):
         state = state.reshape((1, 6, 7))
         prediction_list = self.model.predict(state, batch_size=1)
         self.q_values = prediction_list[0] # get first and only prediction
+        if type(curiosity_values) != type(None):
+            self.q_values += curiosity_values
         action = np.argmax(self.q_values)
         return action
 
