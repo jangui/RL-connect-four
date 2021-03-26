@@ -8,14 +8,14 @@ def main():
     curiosity = [Curiosity(), Curiosity()]
     game = Game()
 
-    model_sav_loc = "./models/autosave/"
+    model_save_loc = "./models/autosave/"
 
     episodes = 40000
     autosave_period = 1000
     render_period = 50
     render = True
 
-    for episode in range(1, episodes+1):
+    for episode in range(episodes+1):
         print(f"Curiosity Game #{episode}")
         game.reset()
         agent = 0
