@@ -15,7 +15,7 @@ def main():
     render_period = 50
     render = True
 
-    for episode in range(episodes+1):
+    for episode in range(1, episodes+1):
         print(f"Curiosity Game #{episode}")
         game.reset()
         agent = 0

@@ -14,7 +14,7 @@ def main():
     epsilon = 1
     epsilon_decay = 0.99985
 
-    for episode in range(episodes+1):
+    for episode in range(1, episodes+1):
         print(f"Noncurious Game #{episode}")
         game.reset()
         agent = 0

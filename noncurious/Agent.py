@@ -81,33 +81,24 @@ class Agent:
             priority_experience = random.choice(self.priority_memory)
             batch[0] = priority_experience
 
-        # used to fit model
-        # X = state
-        # y = q values of the state with the q value for action taken updated according to reward
-        X, y = [], []
-
-        # get all states in our batch
+        # get q vals for states and new states
         states = [elem[0] for elem in batch]
+        new_states = [elem[2] for elem in batch]
+        q_vals = self.model.predict(np.array(states), batch_size=self.batch_size)
+        future_q_vals = self.model.predict(np.array(new_states), batch_size=self.batch_size)
 
-        # get all q values for all states in training data list
-        current_q_vals = self.model.predict(np.array(states), batch_size=self.batch_size)
-
-        # for each training data in the list
-        #   find new q value
-        #   update q values for that state
+        # get q values and update based on reward
+        new_q_vals = []
         for i, (state, action, new_state, reward, done) in enumerate(batch):
             if done:
                 new_q_val = reward
             else:
-                new_state = new_state.reshape((1,6,7))
-                max_future_q_val = max(self.model.predict(new_state, batch_size=1)[0])
+                # take future reward into account
+                max_future_q_val = np.max(future_q_vals[i])
                 new_q_val = reward + self.discount * max_future_q_val
 
-            # update current state's q values with the new q value for action taken
-            current_q_vals[i][action] = new_q_val
+            # update q value for action taken
+            q_vals[i][action] = new_q_val
 
-            X.append(state)
-            y.append(current_q_vals[i])
-
-        # train! :)
-        self.model.fit(np.array(X), np.array(y), batch_size=self.batch_size, verbose=0)
+        # fit states to updated q values
+        self.model.fit(np.array(states), q_vals, batch_size=self.batch_size, verbose=0)
