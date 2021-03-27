@@ -1,14 +1,22 @@
 from Agent import Agent, Curiosity
-from Game import Game
+from .. import Connect4
 import numpy as np
 import sys
 
 def main():
     agents = [Agent(), Agent()]
     curiosity = [Curiosity(), Curiosity()]
-    game = Game()
+    game = Connect4()
 
-    model_save_loc = "./models/autosave/"
+    try:
+        model_save_loc = sys.argv[1]
+    except:
+        model_save_loc = "./models/autosave/"
+
+    try:
+        env_reward = int(sys.argv[2])
+    except:
+        env_reward = 1
 
     episodes = 40000
     autosave_period = 1000
@@ -51,11 +59,13 @@ def main():
             # swap to next agent
             agent = (agent + 1) % 2
 
+        # add curiosity reward to training data
+        add_curiosity_reward(curiosity, training_data)
+
         # after game is finished train agents
         train_models(winner, agents, training_data)
 
         # train each curiosity module
-        # training data was added when curiosity values calculated
         curiosity[0].train()
         curiosity[1].train()
 
@@ -66,6 +76,59 @@ def main():
             agents[1].model.save(model_save_loc + f"yellow{episode}")
             curiosity[1].model.save(model_save_loc + f"yellow_curiosity{episode}")
     return
+
+def add_curiosity_reward(curiosity, training_data):
+    agent2_won = True
+    # if 1st agent won, they played an extra move
+    if len(training_data[0]) != len(training_data[1]):
+        agent2_won = False
+
+    # for each agent
+    for i in range(len(curiosity)):
+        rival = (i + 1 ) % 2
+
+        # for each element in each each agent's training data
+        # note we iterate over 2nd agent's training_data length
+        # 2nd agent's training_data is either same length or one less
+        # bcs winning move doesnt need curiosity reward, this handles
+        # if the 1st agent won
+        print(f"agent {i}")
+        for j in range(len(training_data[1])):
+
+
+            # if first agent, rival response is the same index
+            if i == 0:
+                data_ind = j
+
+            # if 2nd agent, rival's response is index + 1
+            elif i == 1:
+                data_ind = j+1
+
+                # if 2nd agent won, skip last training data point
+                if agent2_won and j == (len(training_data[1]) - 1):
+                    break
+
+            # use rivals state and new state for curiosity rewards and traing
+            state = training_data[rival][data_ind][0]
+            new_state = training_data[rival][data_ind][2]
+
+            # add data for training (training done later)
+            curiosity[i].add_data([state, new_state])
+
+            # calc curiosity reward
+            curiosity_reward = curiosity[i].model.evaluate(state.reshape((1,6,7)),
+                                                            new_state.reshape((1,42)),
+                                                            verbose=0
+                                                            )[0]
+
+
+            print("curiosity reward: ", end="")
+            print(curiosity_reward)
+            print()
+
+            # add curiosity reward to each agent
+            training_data[i][j][3] += curiosity_reward
+
 
 def get_curiosity_values(agent, agents, curiosity, game):
     # remember to train as well

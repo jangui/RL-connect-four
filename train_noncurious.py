@@ -1,10 +1,10 @@
-from Agent import Agent
-from Game import Game
+from Agents.Noncurious import Noncurious
+from Connect4 import Connect4
 import random
 
 def main():
-    agents = [Agent(), Agent()]
-    game = Game()
+    agents = [Noncurious(), Noncurious()]
+    game = Connect4()
 
     episodes = 40000
     autosave_period = 1000

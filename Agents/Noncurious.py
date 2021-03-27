@@ -7,7 +7,7 @@ import math
 from collections import deque
 import random
 
-class Agent:
+class Noncurious:
     def __init__(self, model_path=None):
         self.discount = 0.99
         self.replay_mem_size = 5000

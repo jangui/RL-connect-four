@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 
-class Game:
+class Connect4:
     def __init__(self):
         self.num_actions = 7
         self.reset()
