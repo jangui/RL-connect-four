@@ -1,97 +1,90 @@
 from Agents.Noncurious import Noncurious
+from Agents.Minimax import Minimax
+from Agents.RandomAgent import RandomAgent
+from copy import deepcopy
 from Connect4 import Connect4
 import random
 
 def main():
-    agents = [Noncurious(), Noncurious()]
     game = Connect4()
+    model_path = None
+    agents = [Noncurious(game, model_path=model_path), Minimax(game, max_depth=1, player=-1)]
+    noncurious = 0
 
-    episodes = 40000
+    episodes = 32000
     autosave_period = 1000
     render_period = 50
     render = True
 
-    epsilon = 1
-    epsilon_decay = 0.99985
-
     for episode in range(1, episodes+1):
         print(f"Noncurious Game #{episode}")
         game.reset()
+        winner = -1
+
+        training_data = []
+
         agent = 0
         winner = None
-
-        training_data = [[], []]
-
         while not game.done:
             reward = 0
-            state = game.board
+            state = deepcopy(game.board)
 
-            # preform action
-            if epsilon > random.random():
-                # random action
-                action = random.randint(0, 6)
-                while not game.check_valid_move(action):
-                    action = random.randint(0, 6)
-            else: # agent chosen action
-                action = agents[agent].get_action(state)
-                while not game.check_valid_move(action):
-                    # get next prefered action from agent
-                    action = agents[agent].get_next_action()
+            action = agents[agent].get_action(state)
 
-            new_state = game.move(action)
+            new_state = deepcopy(game.move(action))
 
             if render and ((episode % render_period) == 0):
                 print(new_state)
                 print(f"action taken: {action}")
 
             # check if agent won
-            if game.check_win():
+            win_type = game.check_win()
+            if win_type != 0:
                 winner = agent
 
             # save data for training
-            env_info = [state, action, new_state, reward, game.done]
-            training_data[agent].append(env_info)
+            if agent == noncurious:
+                env_info = [state, action, new_state, reward, game.done]
+                training_data.append(env_info)
 
             # swap to next agent
             agent = (agent + 1) % 2
 
-            # decay epsilon
-            if agent == 0:
-                epsilon *= epsilon_decay
-
         # after game is finished
-        # if there wasnt a tie, train models
-        if type(winner) != type(None):
-            train_models(winner, agents, training_data)
+        # if there wasnt a tie, train model
+        if win_type != 0:
+            train_model(win_type, winner, noncurious, agents, training_data)
 
         # autosave
         if episode % autosave_period == 0:
-            agents[0].model.save(f"./models/autosave/red{episode}")
-            agents[1].model.save(f"./models/autosave/yellow{episode}")
+            agents[noncurious].model.save(f"./models/autosave/noncurious{episode}")
     return
 
-def train_models(winner, agents, training_data):
-    # train winner
-    data = training_data[winner]
+def train_model(win_type, winner, agent, agents, training_data):
+    # if we won add reward to all moves leading to win
+    if winner == agent:
+        print("agent won!")
+        reward = 1
+        if win_type == 2:
+            # less reward for vertical wins
+            reward = 0.001
+        else:
+            print("non vertical win!")
+            reward = 1
 
-    # add reward to every move that lead to win
-    reward_ind = 3
-    for i in range(len(data)):
-        data[i][reward_ind] += 1
-        # add data to model's replay mem for training
-        agents[winner].add_data(data[i])
-    agents[winner].train()
+        for i in range(len(training_data)):
+            training_data[i][3] += reward
+            # add data to model's replay mem for training
+            agents[agent].add_data(training_data[i])
+        agents[agent].train()
+        return
 
-    # train loser
-    loser = (winner + 1) % 2
-    data = training_data[loser]
-    # penalize losing move
-    data[-1][reward_ind] = -1
+    # if we lost, penalize losing move
+    training_data[-1][3] = -1
     # add data to replay mem and train
-    agents[loser].add_data(data[-1])
-    agents[loser].add_priority_data(data[-1])
-    agents[loser].train()
-
+    agents[agent].add_data(training_data[-1])
+    agents[agent].add_priority_data(training_data[-1])
+    agents[agent].train()
 
 if __name__ == "__main__":
     main()

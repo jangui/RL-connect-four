@@ -11,13 +11,15 @@ class Connect4:
         self.board = np.zeros((6,7))
         self.turn = "red"
 
-    def check_valid_move(self, column):
+    def check_valid_move(self, column, board=None):
+        if type(board) == type(None):
+            board = self.board
         # invalid column
         if column > 6 or column < 0:
             return False
 
         # column full
-        if self.board[0][column] != 0:
+        if board[0][column] != 0:
             return False
 
         return True
@@ -32,18 +34,18 @@ class Connect4:
                 return False
         return True
 
-    def move(self, column, board=None, test=False):
+    def move(self, column, board=None, test=False, action=None):
         if type(board) == type(None):
             board = self.board
-
-        if self.turn == "red":
-            action = 1
-            if not test:
-                self.turn = "yellow"
-        else:
-            action = -1
-            if not test:
-                self.turn = "red"
+        if type(action) == type(None):
+            if self.turn == "red":
+                action = 1
+                if not test:
+                    self.turn = "yellow"
+            else:
+                action = -1
+                if not test:
+                    self.turn = "red"
 
         # check where to place piece in column (because gravity effects connect 4)
         for i in range(6):
@@ -71,16 +73,16 @@ class Connect4:
         if self.check_win_row(board):
             if not test:
                 self.done = True
-            return True
+            return 1
         if self.check_win_column(board):
             if not test:
                 self.done = True
-            return True
+            return 2
         if self.check_win_diagonal(board):
             if not test:
                 self.done = True
-            return True
-        return False
+            return 3
+        return 0
 
     def check_win_row(self, board):
         for r in range(6):

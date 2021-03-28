@@ -8,13 +8,15 @@ from collections import deque
 import random
 
 class CuriousAgent:
-    def __init__(self, model_path=None):
+    def __init__(self, game, model_path=None):
+        self.game = game
         self.discount = 0.99
-        self.replay_mem_size = 5000
-        self.minimum_replay_len = 150
+        self.replay_mem_size = 50000
+        self.minimum_replay_len = 500
         self.batch_size = 64
         self.replay_memory = deque(maxlen=self.replay_mem_size)
-        self.priority_memory = deque(maxlen=50)
+        self.priority_mem_size = 500
+        self.priority_memory = deque(maxlen=self.priority_mem_size)
         self.model = self.create_model(model_path)
 
 
@@ -36,22 +38,17 @@ class CuriousAgent:
 
         return model
 
-    def get_action(self, state, curiosity_values=None):
-        state = state.reshape((1, 6, 7))
+    def get_action(self, board):
+        state = board.reshape((1, 6, 7))
         prediction_list = self.model.predict(state, batch_size=1)
-        self.q_values = prediction_list[0] # get first and only prediction
-        if type(curiosity_values) != type(None):
-            self.q_values += curiosity_values
-        action = np.argmax(self.q_values)
+        q_values = prediction_list[0]
+        action = np.argmax(q_values)
+        while not self.game.check_valid_move(action, board):
+            q_values[action] = -math.inf
+            action = np.argmax(q_values)
+            if math.isinf(action):
+                return None
         return action
-
-    def get_next_action(self):
-        first_choice = np.argmax(self.q_values)
-        self.q_values[first_choice] = -math.inf
-        next_choice = np.argmax(self.q_values)
-        if math.isinf(self.q_values[next_choice]):
-            return None
-        return next_choice
 
     def add_data(self, training_data):
         # add training data to model's replay memory

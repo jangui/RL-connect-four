@@ -8,16 +8,18 @@ from collections import deque
 import random
 
 class Noncurious:
-    def __init__(self, game, model_path=None):
+    def __init__(self, game, training=True, model_path=None):
         self.game = game
         self.discount = 0.99
-        self.replay_mem_size = 5000
-        self.minimum_replay_len = 150
+        self.replay_mem_size = 50000
+        self.minimum_replay_len = 500
         self.batch_size = 64
         self.epsilon = 1
         self.epsilon_decay = 0.99985
+        self.training = training
         self.replay_memory = deque(maxlen=self.replay_mem_size)
-        self.priority_memory = deque(maxlen=50)
+        self.priority_mem_size = 500
+        self.priority_memory = deque(maxlen=self.priority_mem_size)
         self.model = self.create_model(model_path)
 
     def create_model(self, model_path):
@@ -39,8 +41,8 @@ class Noncurious:
         return model
 
     def get_action(self, board):
-        # random action
-        if self.epsilon > random.random():
+        # random action (only if training)
+        if self.epsilon > random.random() and self.training:
             self.epsilon *= self.epsilon_decay
             action = random.randint(0, 6)
             while not self.game.check_valid_move(action, board):
