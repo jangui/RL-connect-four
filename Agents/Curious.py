@@ -7,7 +7,7 @@ import math
 from collections import deque
 import random
 
-class Agent:
+class CuriousAgent:
     def __init__(self, model_path=None):
         self.discount = 0.99
         self.replay_mem_size = 5000
@@ -104,7 +104,6 @@ class Agent:
 
         # fit states to updated q values
         self.model.fit(np.array(states), q_vals, batch_size=self.batch_size, verbose=0)
-
 
 class Curiosity:
     def __init__(self, model_path=None):

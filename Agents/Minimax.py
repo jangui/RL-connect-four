@@ -1,32 +1,82 @@
 import math
 
 class Minimax:
-    def __init__(self, game, player=1):
+    def __init__(self, game, player=1, max_depth=4):
         self.game = game
         self.player = player
+        if max_depth < 1:
+            max_depth = 1
+        self.max_depth = max_depth
 
-    def calc_utility(self, board):
+    def get_action(self, board):
+        _, action = self.maximize(board, 0)
+        return action
+
+    def maximize(self, board, depth):
+        if depth >= self.max_depth or self.game.is_full(board) or self.game.check_win(board, test=True):
+            utility = self.net_utility(board, self.player)
+            return utility, None
+        else:
+            max_util = -math.inf
+            max_util_action = None
+            for action in range(7):
+                # check if action valid
+                if not self.game.check_valid_move(action, board):
+                    continue
+                new_state = self.game.move(action, board, test=True, action = self.player)
+                min_util, _ = self.minimize(new_state, depth+1)
+                if min_util >= max_util:
+                    max_util = min_util
+                    max_util_action = action
+            return max_util, max_util_action
+
+    def minimize(self, board, depth):
+        if depth >= self.max_depth or self.game.is_full(board) or self.game.check_win(board, test=True):
+            utility = self.net_utility(board, self.player)
+            return utility, None
+        else:
+            min_util = math.inf
+            min_util_action = None
+            for action in range(7):
+                # check if action valid
+                if not self.game.check_valid_move(action, board):
+                    continue
+                new_state = self.game.move(action, board, test=True, action = -self.player)
+                max_util, _ = self.maximize(new_state, depth+1)
+                if max_util <= min_util:
+                    min_util = max_util
+                    min_util_action = action
+            return min_util, min_util_action
+
+
+    def net_utility(self, board, player):
+        rival_util = self.calc_utility(board, -player)
+        if math.isinf(rival_util):
+            return -math.inf
+        player_util = self.calc_utility(board, player)
+        if math.isinf(player_util):
+            return math.inf
+        return rival_util + player_util
+
+    def calc_utility(self, board, player):
         utility = 0
 
-        vertical_utility = self.calc_vert_utility(board)
-        print("vert:",vertical_utility)
+        vertical_utility = self.calc_vert_utility(board, player)
         if math.isinf(vertical_utility):
             return math.inf
         utility += vertical_utility
 
-        horizontal_utility = self.calc_hor_utility(board)
-        print("hor:",horizontal_utility)
+        horizontal_utility = self.calc_hor_utility(board, player)
         if math.isinf(horizontal_utility):
             return math.inf
         utility += horizontal_utility
 
-        diagonal_utility = self.calc_diag_utility(board)
-        print("diag:",diagonal_utility)
+        diagonal_utility = self.calc_diag_utility(board, player)
         if math.isinf(diagonal_utility):
             return math.inf
         return utility + diagonal_utility
 
-    def calc_vert_utility(self, board):
+    def calc_vert_utility(self, board, player):
         utility = 0
         # count consecutive vertical pieces
         # start count from bottom to top
@@ -42,12 +92,12 @@ class Minimax:
                 # if we reach this row but it doesn't have our piece
                 # then we can't connect 4 vertically on this column
                 if r == 3:
-                    if board[r][c] != self.player:
+                    if board[r][c] != player:
                         connected = 0
                         break
 
                 # count connected pieces
-                if board[r][c] == self.player:
+                if board[r][c] == player:
                     connected += 1
                 else:
                     connected = 0
@@ -57,13 +107,13 @@ class Minimax:
             utility += connected
         return utility
 
-    def calc_hor_utility(self, board):
+    def calc_hor_utility(self, board, player):
         # there are 4 sections we can connect 4 in each row
         # utility = the number of pieces in one each of those sections
         # if there is a rival piece in one of those sections,
         # then that section has 0 utilty
         utility = 0
-        rival = -self.player
+        rival = -player
         for r in range(6):
             section_utilities = [0,0,0,0]
             for c in range(7):
@@ -99,7 +149,7 @@ class Minimax:
                         continue
                     if piece == rival:
                         section_utilities[i] = -1
-                    elif piece == self.player:
+                    elif piece == player:
                         section_utilities[i] += 1
 
             for section_util in section_utilities:
@@ -110,7 +160,7 @@ class Minimax:
                 utility += section_util
         return utility
 
-    def calc_diag_utility(self, board):
+    def calc_diag_utility(self, board, player):
         utility = 0
         rival = -self.player
         # calc connections diagonally bottom left to top right
