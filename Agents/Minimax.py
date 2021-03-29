@@ -13,7 +13,11 @@ class Minimax:
         return action
 
     def maximize(self, board, depth):
-        if depth >= self.max_depth or self.game.is_full(board) or self.game.check_win(board, test=True):
+        if self.game.check_win(board, test=True):
+            return -math.inf, None
+        if self.game.is_full(board):
+            return 0, None
+        if depth >= self.max_depth:
             utility = self.net_utility(board, self.player)
             return utility, None
         else:
@@ -31,7 +35,11 @@ class Minimax:
             return max_util, max_util_action
 
     def minimize(self, board, depth):
-        if depth >= self.max_depth or self.game.is_full(board) or self.game.check_win(board, test=True):
+        if self.game.check_win(board, test=True):
+            return math.inf, None
+        if self.game.is_full(board):
+            return 0, None
+        if depth >= self.max_depth:
             utility = self.net_utility(board, self.player)
             return utility, None
         else:
