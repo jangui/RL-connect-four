@@ -1,4 +1,5 @@
 import math
+import random
 
 class Minimax:
     def __init__(self, game, player=1, max_depth=4):
@@ -18,7 +19,7 @@ class Minimax:
         if self.game.is_full(board):
             return 0, None
         if depth >= self.max_depth:
-            utility = self.net_utility(board, self.player)
+            utility = self.calc_utility(board, self.player)
             return utility, None
         else:
             max_util = -math.inf
@@ -40,7 +41,7 @@ class Minimax:
         if self.game.is_full(board):
             return 0, None
         if depth >= self.max_depth:
-            utility = self.net_utility(board, self.player)
+            utility = self.calc_utility(board, self.player)
             return utility, None
         else:
             min_util = math.inf
@@ -263,5 +264,26 @@ class Minimax:
                 c -= 1
             utility += connected
         return utility
+
+# same as minimax except occasional random action taken
+# random action percent depends on dilute
+class MinimaxDilute(Minimax):
+    def __init__(self, game, player=1, max_depth=4, dilute=0.2):
+        super().__init__(game, player, max_depth)
+        self.dilute = dilute
+
+    def get_action(self, board):
+        # take random action
+        if self.dilute > random.random():
+
+            # choose random action
+            action = random.randint(0, 6)
+            while not self.game.check_valid_move(action, board):
+                action = random.randint(0, 6)
+            return action
+
+        # take minimax action
+        _, action = self.maximize(board, 0)
+        return action
 
 
