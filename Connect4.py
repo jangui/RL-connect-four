@@ -8,8 +8,9 @@ class Connect4:
 
     def reset(self):
         self.done = False
-        self.board = np.zeros((6,7))
-        self.turn = "red"
+        self.board = np.zeros((6,7),dtype=int)
+        self.player = 1
+        self.moves = 0
 
     def check_valid_move(self, column, board=None):
         if type(board) == type(None):
@@ -35,17 +36,16 @@ class Connect4:
         return True
 
     def move(self, column, board=None, test=False, action=None):
+
         if type(board) == type(None):
             board = self.board
+
         if type(action) == type(None):
-            if self.turn == "red":
-                action = 1
-                if not test:
-                    self.turn = "yellow"
-            else:
-                action = -1
-                if not test:
-                    self.turn = "red"
+            action = self.player
+
+        if not test:
+            self.player *= -1
+            self.moves += 1
 
         # check where to place piece in column (because gravity effects connect 4)
         for i in range(6):

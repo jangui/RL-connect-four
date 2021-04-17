@@ -2,14 +2,15 @@ import math
 import random
 
 class Minimax:
-    def __init__(self, game, player=1, max_depth=4):
+    def __init__(self, game, max_depth=4):
         self.game = game
-        self.player = player
+        self.model_name = ""
         if max_depth < 1:
             max_depth = 1
         self.max_depth = max_depth
 
-    def get_action(self, board):
+    def get_action(self, board, player):
+        self.player = player
         _, action = self.maximize(board, 0)
         return action
 
@@ -265,14 +266,32 @@ class Minimax:
             utility += connected
         return utility
 
+    # functions needed to train but not used by this agent
+
+    def add_data(self, env_info):
+        pass
+
+    def train(self):
+        pass
+
+    def post_episode(self, episode):
+        pass
+
+    def won(self):
+        pass
+
+    def lost(self):
+        pass
+
+
 # same as minimax except occasional random action taken
 # random action percent depends on dilute
 class MinimaxDilute(Minimax):
-    def __init__(self, game, player=1, max_depth=4, dilute=0.2):
-        super().__init__(game, player, max_depth)
+    def __init__(self, game, max_depth=4, dilute=0.2):
+        super().__init__(game, max_depth)
         self.dilute = dilute
 
-    def get_action(self, board):
+    def get_action(self, board, player):
         # take random action
         if self.dilute > random.random():
 
@@ -283,6 +302,7 @@ class MinimaxDilute(Minimax):
             return action
 
         # take minimax action
+        self.player = player
         _, action = self.maximize(board, 0)
         return action
 

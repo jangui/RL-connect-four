@@ -1,33 +1,54 @@
-from Agents.Minimax import Minimax
-from Agents.Noncurious import Noncurious
+from Agents.Minimax import MinimaxDilute
+from Agents.DQN import DQNAgent
 from Connect4 import Connect4
+import matplotlib.pyplot as plt
 
 def main():
     game = Connect4()
-    model_path = ""
-    agent = Noncurious(game, training=False, model_path=model_path)
+    #agent = DQNAgent(game, training=False, model_path=model_path)
+    minimax1 = MinimaxDilute(game, max_depth=2, dilute=0.1)
+    minimax2 = MinimaxDilute(game, max_depth=3, dilute=0.3)
 
-    while not game.done:
-        action = agent.get_action(game.board)
-        game.move(action)
+    players = [[minimax1, 0, 0], [minimax2, 0, 0]]
 
-        if game.is_full() or game.check_win():
-            break
+    render = False
+    games = 1000
+    for i in range(games):
+        print("Game:", i)
 
-        print()
-        print(game.board)
-        print("rival action:", action)
+        game.reset()
+        player = 0
+        while not game.done:
+            current_player = players[player][0]
+            action = current_player.get_action(game.board, game.player)
+            game.move(action)
 
-        action = int(input("Action: "))
-        while not game.check_valid_move(action):
-            action = int(input("Action: "))
-        game.move(action)
+            if render:
+                print(game.board)
 
-        game.check_win()
+            if game.check_win():
+                # add win
+                players[player][player+1] += 1
+                break
+            if game.is_full():
+                break
 
-    print(game.board)
+            player = (player + 1) % 2
 
+        if render:
+            print()
+
+        players.reverse()
+
+    print(players)
     return
+    x = ['first move', 'second move']
+    y = [players[0][1], players[0][2]]
+    plt.bar(x, y, label='minimax')
+    plt.show()
+    y = [players[q][1], players[1][2]]
+    plt.bar(x, y, label='minimax2')
+    plt.show()
 
 if __name__ == "__main__":
     main()
