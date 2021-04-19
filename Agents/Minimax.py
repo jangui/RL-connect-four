@@ -4,17 +4,17 @@ import random
 class Minimax:
     def __init__(self, game, max_depth=4):
         self.game = game
-        self.model_name = ""
+        self.model_name = f"minimax-maxdepth{max_depth}"
         if max_depth < 1:
             max_depth = 1
         self.max_depth = max_depth
 
     def get_action(self, board, player):
         self.player = player
-        _, action = self.maximize(board, 0)
+        _, action = self.maximize(board, 0, -math.inf, math.inf)
         return action
 
-    def maximize(self, board, depth):
+    def maximize(self, board, depth, alpha, beta):
         if self.game.check_win(board, test=True):
             return -math.inf, None
         if self.game.is_full(board):
@@ -30,13 +30,17 @@ class Minimax:
                 if not self.game.check_valid_move(action, board):
                     continue
                 new_state = self.game.move(action, board, test=True, action = self.player)
-                min_util, _ = self.minimize(new_state, depth+1)
+                min_util, _ = self.minimize(new_state, depth+1, alpha, beta)
                 if min_util >= max_util:
                     max_util = min_util
                     max_util_action = action
+                if min_util >= alpha:
+                    alpha = min_util
+                if alpha >= beta:
+                    break
             return max_util, max_util_action
 
-    def minimize(self, board, depth):
+    def minimize(self, board, depth, alpha, beta):
         if self.game.check_win(board, test=True):
             return math.inf, None
         if self.game.is_full(board):
@@ -52,10 +56,14 @@ class Minimax:
                 if not self.game.check_valid_move(action, board):
                     continue
                 new_state = self.game.move(action, board, test=True, action = -self.player)
-                max_util, _ = self.maximize(new_state, depth+1)
+                max_util, _ = self.maximize(new_state, depth+1, alpha, beta)
                 if max_util <= min_util:
                     min_util = max_util
                     min_util_action = action
+                if max_util <= beta:
+                    beta = max_util
+                if beta <= alpha:
+                    break
             return min_util, min_util_action
 
 
@@ -268,7 +276,7 @@ class Minimax:
 
     # functions needed to train but not used by this agent
 
-    def add_data(self, env_info):
+    def add_data(self, training_data, winner, win_type):
         pass
 
     def train(self):
@@ -283,6 +291,12 @@ class Minimax:
     def lost(self):
         pass
 
+    def verbose(self):
+        pass
+
+    def plot_results(self):
+        pass
+
 
 # same as minimax except occasional random action taken
 # random action percent depends on dilute
@@ -290,6 +304,7 @@ class MinimaxDilute(Minimax):
     def __init__(self, game, max_depth=4, dilute=0.2):
         super().__init__(game, max_depth)
         self.dilute = dilute
+        self.model_name = f"minimax_dilute-maxdepth{max_depth}-dilute{dilute}"
 
     def get_action(self, board, player):
         # take random action
@@ -303,7 +318,6 @@ class MinimaxDilute(Minimax):
 
         # take minimax action
         self.player = player
-        _, action = self.maximize(board, 0)
+        _, action = self.maximize(board, 0, -math.inf, math.inf)
         return action
-
 
