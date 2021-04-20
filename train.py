@@ -13,39 +13,68 @@ from Connect4 import Connect4
 def main():
     game = Connect4()
     dqn = DQNAgent(game,
-                    model_name="wiz",
-                    save_location="./models/wiz/",
+                    model_name="50x7-model1",
+                    max_depth = 3,
+                    save_location="./models/50x7/",
                     model_path=None,
                     )
-    minimax = MinimaxDilute(game, max_depth=3, dilute=0.10)
-    agents = [dqn, minimax]
-    players = agents
+    dqn2 = DQNAgent(game,
+                    model_name="50x7-model2",
+                    max_depth = 3,
+                    save_location="./models/50x7/",
+                    model_path=None,
+                    )
+    dqn3 = DQNAgent(game,
+                    model_name="50x7-model3",
+                    max_depth = 3,
+                    save_location="./models/50x7/",
+                    model_path=None,
+                    )
+    dqn4 = DQNAgent(game,
+                    model_name="50x7-model4",
+                    max_depth = 3,
+                    save_location="./models/50x7/",
+                    model_path=None,
+                    )
+    dqn5 = DQNAgent(game,
+                    model_name="50x7-model5",
+                    max_depth = 3,
+                    save_location="./models/50x7/",
+                    model_path=None,
+                    )
+    #minimax = MinimaxDilute(game, max_depth=3, dilute=0.10)
+    agents = [dqn, dqn2, dqn3, dqn4, dqn5]
+    players = [None, None]
+    players[0] = agents[0]
+    players[1] = agents[1]
     render = True
-    episodes = 50000
+    episodes = 500000
     render_period = 250
 
     winner = None
-    move_count_hist = []
+    moves_count_hist = []
+    moves_rolling_avg = []
+    rolling_average_period = 100
 
     # SIGQUIT (CTRL-/) signal handler
     # this will toggle between verbose player output or not
     def verbose(signal, frame):
-        for p in players:
-            p.verbose()
+        for agent in agents:
+            agent.verbose()
     signal.signal(signal.SIGQUIT, verbose)
 
     # SIGINT (CTRL-C) signal handler
     # plot results before exiting
     def finish(signal, frame):
-        for p in players:
-            p.plot_results()
-        plot_avg_moves(move_count_hist)
+        for agent in agents:
+            agent.plot_results()
+        plot_moves_rolling_avg(moves_rolling_avg, rolling_average_period)
         sys.exit(1)
     signal.signal(signal.SIGINT, finish)
 
     for episode in range(1, episodes+1):
         print(f"Game #{episode} ", end='')
-        if len(players) > 2:
+        if len(agents) > 2:
             print(f"{players[0].model_name} vs. {players[1].model_name} ", end='')
 
         game.reset()
@@ -86,43 +115,40 @@ def main():
         if type(winner) != type(None):
             print(f"Winner: {players[winner].model_name} ", end='')
         print(f"Moves: {game.moves}");
-        move_count_hist.append(game.moves)
+        moves_count_hist.append(game.moves)
 
         # handle post episode events
         # stats, autosaving, etc
         for p in players:
-            p.post_episode(episode)
+            p.post_episode()
 
         # change current players
         if len(agents) > len(players):
             # rotate agents
-            agent1 = random.randint(0,len(agents)-1)
-            agent2 = random.randint(0,len(agents)-1)
-            while agent2 == agent1:
-                agent2 = random.randint(0,len(agents)-1)
-            players[0] = agents[agent1]
-            players[1] = agents[agent2]
+            np.random.shuffle(agents)
+            players[0] = agents[0]
+            players[1] = agents[1]
         else:
             # swap player's side
             players.reverse()
 
+        if episode % rolling_average_period == 0:
+            moves_rolling_avg.append(int(np.mean(moves_count_hist)))
+            moves_count_hist = []
+
+
     for p in players:
         p.plot_results()
 
-    plot_avg_moves(move_count_hist)
+    plot_moves_rolling_avg(moves_rolling_avg, rolling_average_period)
 
-def plot_avg_moves(move_count_hist):
-    if len(move_count_hist) < 20:
-        return
-    rolling_avg = [0]
-    rolling_avg[0] = int(np.mean(move_count_hist[:19]))
-    for i in range(19, len(move_count_hist)):
-        avg = int(np.mean(move_count_hist[:i+1]))
-        rolling_avg.append(avg)
+def plot_moves_rolling_avg(rolling_avg, rolling_average_period):
     plt.plot(rolling_avg)
+    plt.title("Moves Rolling Average")
+    plt.xlabel(f"Episodes ({rolling_average_period}'s of games)")
+    plt.ylabel("Moves")
     plt.show()
     plt.close()
-
 
 if __name__ == "__main__":
     main()

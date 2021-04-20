@@ -25,7 +25,7 @@ class Human:
         pass
     def train(self):
         pass
-    def post_episode(self, episode):
+    def post_episode(self):
         pass
     def won(self):
         pass

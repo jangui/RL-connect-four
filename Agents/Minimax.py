@@ -66,7 +66,6 @@ class Minimax:
                     break
             return min_util, min_util_action
 
-
     def net_utility(self, board, player):
         rival_util = self.calc_utility(board, -player)
         if math.isinf(rival_util):
@@ -282,7 +281,7 @@ class Minimax:
     def train(self):
         pass
 
-    def post_episode(self, episode):
+    def post_episode(self):
         pass
 
     def won(self):
