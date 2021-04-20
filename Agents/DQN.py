@@ -10,15 +10,16 @@ import math
 import random
 
 class DQNAgent:
-    def __init__(self, game, save_location = "./", model_name="dqn", model_path=None, training=True):
+    def __init__(self, game, max_depth=1, save_location = "./", model_name="dqn", model_path=None, training=True):
         self.game = game
+        self.max_depth = max_depth
 
         # training settings
         self.replay_mem_size = 20000
         #self.replay_mem_size = 5000
         self.replay_memory = deque(maxlen=self.replay_mem_size)
-        self.minimum_replay_len = 1000
-        #self.minimum_replay_len = 3000
+        #self.minimum_replay_len = 1000
+        self.minimum_replay_len = 5000
         self.batch_size = 128
 
         self.discount = 0.9
@@ -53,6 +54,7 @@ class DQNAgent:
         self.win_streak = 0
         self.aggregate_wins = []
         self.aggregate_win_streaks = []
+        self.episode = 1
 
         # saving settings
         self.model_name = model_name
@@ -92,24 +94,109 @@ class DQNAgent:
                 action = random.randint(0, 6)
             return action
 
+
+        # get action from network
+        _, action = self.maximize(board, player, 0, -math.inf, math.inf)
+        return action
+
+    def get_q_values(self, board, player):
+        # network doesn't know what player it is
+        # board gets fixed to always be in same prespective
         state = deepcopy(board)
         state = state.reshape((1, 6, 7))
         if player == -1:
             state *= -1
-        prediction_list = self.model.predict(state, batch_size=1)
-        q_values = prediction_list[0]
+
+        batch_of_predictions = self.model.predict(state, batch_size=1)
+        q_values = batch_of_predictions[0]
 
         if self.debug:
             print("\n", board)
             print(f"{self.model_name} q vals: {q_values}\n")
 
-        action = np.argmax(q_values)
-        while not self.game.check_valid_move(action, board):
-            q_values[action] = -math.inf
+        return q_values
+
+    def maximize(self, board, player, depth, alpha, beta):
+        if self.game.check_win(board, test=True):
+            return None, None
+        if self.game.is_full(board):
+            return None, None
+        if depth >= self.max_depth-1:
+            # return utility & action of action with highest q value that is a valid move
+            q_values = self.get_q_values(board, player)
             action = np.argmax(q_values)
-            if math.isinf(action):
-                return None
-        return action
+            while not self.game.check_valid_move(action, board):
+                q_values[action] = -math.inf
+                action = np.argmax(q_values)
+            utility = q_values[action]
+            return utility, action
+        else:
+            max_util = -math.inf
+            max_util_action = None
+            q_values = None
+            for action in range(7):
+                # check if action valid
+                if not self.game.check_valid_move(action, board):
+                    continue
+                new_state = self.game.move(action, board, test=True, action = player)
+                min_util, _ = self.minimize(new_state, -player, depth+1, alpha, beta)
+
+                # if node returned None then it is a terminal state
+                # thus we need to get its q value its parent (this node)
+                if min_util == None:
+                    if type(q_values) == type(None):
+                        q_values = self.get_q_values(board, player)
+                    min_util = q_values[action]
+
+                if min_util >= max_util:
+                    max_util = min_util
+                    max_util_action = action
+                if min_util >= alpha:
+                    alpha = min_util
+                if alpha >= beta:
+                    break
+            return max_util, max_util_action
+
+    def minimize(self, board, player, depth, alpha, beta):
+        if self.game.check_win(board, test=True):
+            return None, None
+        if self.game.is_full(board):
+            return None, None
+        if depth >= self.max_depth-1:
+            # return utility & action of action with lowest q value that is a valid move
+            q_values = -self.get_q_values(board, player)
+            action = np.argmin(q_values)
+            while not self.game.check_valid_move(action, board):
+                q_values[action] = math.inf
+                action = np.argmin(q_values)
+            utility = q_values[action]
+            return utility, action
+        else:
+            min_util = math.inf
+            min_util_action = None
+            q_values = None
+            for action in range(7):
+                # check if action valid
+                if not self.game.check_valid_move(action, board):
+                    continue
+                new_state = self.game.move(action, board, test=True, action = player)
+                max_util, _ = self.maximize(new_state, -player, depth+1, alpha, beta)
+
+                # if node returned None then it is a terminal state
+                # thus we need to get its q value its parent (this node)
+                if max_util == None:
+                    if type(q_values) == type(None):
+                        q_values = self.get_q_values(board, player)
+                    max_util = q_values[action]
+
+                if max_util <= min_util:
+                    min_util = max_util
+                    min_util_action = action
+                if max_util <= beta:
+                    beta = max_util
+                if beta <= alpha:
+                    break
+            return min_util, min_util_action
 
     def add_data(self, training_data, winner, win_type):
         # add training data to model's replay memory
@@ -188,12 +275,12 @@ class DQNAgent:
         # fit states to updated q values
         self.model.fit(np.array(states), q_vals, batch_size=self.batch_size, verbose=0)
 
-    def post_episode(self, episode):
+    def post_episode(self):
         self.update_target_model()
         self.decay_epsilon()
         self.halt_training()
 
-        if episode % self.aggregation_period == 0:
+        if self.episode % self.aggregation_period == 0:
             # update aggr stats
             self.aggregate_wins.append(self.wins)
             self.aggregate_win_streaks.append(self.best_win_streak)
@@ -205,12 +292,14 @@ class DQNAgent:
             if self.debug:
                 self.plot_results()
 
-            self.save_good_model(episode)
+            self.save_good_model(self.episode)
             self.reset_aggregate_stats()
 
         # auto save
-        if episode % self.autosave_period == 0:
-            self.autosave(episode)
+        if self.episode % self.autosave_period == 0:
+            self.autosave(self.episode)
+
+        self.episode += 1
 
     def halt_training(self):
         if self.wins > self.training_halt_percent_margin * self.aggregation_period:
@@ -266,26 +355,27 @@ class DQNAgent:
         self.current_win_streak = 0
 
     def plot_results(self):
-        rolling_average_wins = self.rolling_average(self.aggregate_wins)
-        rolling_average_win_streak = self.rolling_average(self.aggregate_win_streaks)
+        #rolling_average_wins = self.rolling_average(self.aggregate_wins)
         plt.plot(self.aggregate_wins)
         plt.plot(self.aggregate_win_streaks)
-        plt.plot(rolling_average_wins, color='red', linewidth=0.5)
-        plt.plot(rolling_average_win_streak, color='red', linewidth=0.5)
+        #plt.plot(rolling_average_wins, color='red', linewidth=0.5)
         plt.title(f"{self.model_name} Aggregate Results")
         plt.xlabel(f"Training Time ({self.aggregation_period}'s of Games)")
         plt.ylabel("Wins")
-        plt.legend(["Aggregate Wins", "Best Win Streak", "Rolling Average"])
+        plt.legend(["Aggregate Wins", "Best Win Streak"])
+        #plt.legend(["Aggregate Wins", "Best Win Streak", "Rolling Average"])
         plt.show()
         plt.close()
         plt.clf()
 
+    """
     def rolling_average(self, lst):
         rolling_avg = []
         for i in range(len(lst)):
             avg = int(np.mean(lst[:i+1]))
             rolling_avg.append(avg)
         return rolling_avg
+    """
 
     def verbose(self):
         self.debug = (self.debug + 1) % 2
