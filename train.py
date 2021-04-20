@@ -1,29 +1,52 @@
+import random
+import signal
+import sys
+from copy import deepcopy
+import numpy as np
+import matplotlib.pyplot as plt
+
 from Agents.DQN import DQNAgent
 from Agents.Minimax import Minimax, MinimaxDilute
 from Agents.RandomAgent import RandomAgent
-from copy import deepcopy
 from Connect4 import Connect4
-import random
 
 def main():
     game = Connect4()
     dqn = DQNAgent(game,
-                    model_name="athena",
-                    save_location="./models/athena/",
+                    model_name="wiz",
+                    save_location="./models/wiz/",
                     model_path=None,
                     )
-    minimax = MinimaxDilute(game, max_depth=2, dilute=0.25)
-
+    minimax = MinimaxDilute(game, max_depth=3, dilute=0.10)
     agents = [dqn, minimax]
     players = agents
-
-    episodes = 50000
-    render_period = 125
     render = True
+    episodes = 50000
+    render_period = 250
 
     winner = None
+    move_count_hist = []
+
+    # SIGQUIT (CTRL-/) signal handler
+    # this will toggle between verbose player output or not
+    def verbose(signal, frame):
+        for p in players:
+            p.verbose()
+    signal.signal(signal.SIGQUIT, verbose)
+
+    # SIGINT (CTRL-C) signal handler
+    # plot results before exiting
+    def finish(signal, frame):
+        for p in players:
+            p.plot_results()
+        plot_avg_moves(move_count_hist)
+        sys.exit(1)
+    signal.signal(signal.SIGINT, finish)
+
     for episode in range(1, episodes+1):
         print(f"Game #{episode} ", end='')
+        if len(players) > 2:
+            print(f"{players[0].model_name} vs. {players[1].model_name} ", end='')
 
         game.reset()
         training_data = [[],[]]
@@ -47,8 +70,12 @@ def main():
             if win_type != 0:
                 # player won
                 winner = player
-                handle_win(players, winner)
-                add_training_data(training_data[winner], players, win_type)
+                players[winner].won()
+                loser = (winner + 1 ) % 2
+                players[loser].lost()
+
+                for p in players:
+                    p.add_data(training_data[winner], winner, win_type)
 
             players[player].train()
 
@@ -57,13 +84,14 @@ def main():
         ### episode finished ###
 
         if type(winner) != type(None):
-            print(f"Winner: {players[winner]} ", end='')
+            print(f"Winner: {players[winner].model_name} ", end='')
         print(f"Moves: {game.moves}");
+        move_count_hist.append(game.moves)
 
         # handle post episode events
         # stats, autosaving, etc
-        for player in players:
-            player.post_episode(episode)
+        for p in players:
+            p.post_episode(episode)
 
         # change current players
         if len(agents) > len(players):
@@ -78,23 +106,23 @@ def main():
             # swap player's side
             players.reverse()
 
-def handle_win(players, winner):
-    players[winner].won()
-    loser = (winner + 1 ) % 2
-    players[loser].lost()
+    for p in players:
+        p.plot_results()
 
-def add_training_data(data, players, win_type):
-    reward  = 1
+    plot_avg_moves(move_count_hist)
 
-    # less reward on vertical wins
-    if win_type == 2:
-        reward = 0.001
+def plot_avg_moves(move_count_hist):
+    if len(move_count_hist) < 20:
+        return
+    rolling_avg = [0]
+    rolling_avg[0] = int(np.mean(move_count_hist[:19]))
+    for i in range(19, len(move_count_hist)):
+        avg = int(np.mean(move_count_hist[:i+1]))
+        rolling_avg.append(avg)
+    plt.plot(rolling_avg)
+    plt.show()
+    plt.close()
 
-    for env_info in data:
-        reward_index = 3
-        env_info[reward_index] += reward
-        players[0].add_data(env_info)
-        players[1].add_data(env_info)
 
 if __name__ == "__main__":
     main()
