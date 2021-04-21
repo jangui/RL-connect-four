@@ -1,4 +1,4 @@
-import random
+import numpy as np
 
 class RandomAgent:
     def __init__(self, game):
@@ -6,9 +6,9 @@ class RandomAgent:
         self.model_name = "random_agent"
 
     def get_action(self, state, player):
-        action = random.randint(0, 6)
+        action = np.random.randint(0, 7)
         while not self.game.check_valid_move(action, state):
-            action = random.randint(0, 6)
+            action = np.random.randint(0, 7)
         return action
 
     # functions needed to train but not used by this agent

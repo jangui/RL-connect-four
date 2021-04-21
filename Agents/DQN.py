@@ -10,26 +10,27 @@ import math
 import random
 
 class DQNAgent:
-    def __init__(self, game, max_depth=1, save_location = "./", model_name="dqn", model_path=None, training=True):
+    def __init__(self, game, max_depth=3, save_location = "./", model_name="dqn", model_path=None, training=True):
         self.game = game
         self.max_depth = max_depth
 
         # training settings
-        self.replay_mem_size = 20000
-        #self.replay_mem_size = 5000
+        #self.replay_mem_size = 20000
+        self.replay_mem_size = 5000
         self.replay_memory = deque(maxlen=self.replay_mem_size)
-        #self.minimum_replay_len = 1000
-        self.minimum_replay_len = 5000
-        self.batch_size = 128
+        self.minimum_replay_len = 1000
+        #self.minimum_replay_len = 5000
+        #self.batch_size = 128
+        self.batch_size = 64
 
         self.discount = 0.9
-        self.lr = 0.00001 # learning rate
-        #self.lr = 0.0001 # learning rate
+        #self.lr = 0.00001 # learning rate
+        self.lr = 0.0001 # learning rate
 
         self.epsilon = 1
-        self.epsilon_decay = 0.999985
-        #self.epsilon_decay = 0.9999
-        self.epsilon_reintroduction = True
+        #self.epsilon_decay = 0.999985
+        self.epsilon_decay = 0.9999
+        self.epsilon_reintroduction = False
         self.epsilon_reintroduction_value = 0.5
         self.min_epsilon = 0.15
 
@@ -64,7 +65,7 @@ class DQNAgent:
 
         # create models
         self.model = self.create_model(model_path)
-        #self.target_model = self.create_model(model_path)
+        self.target_model = self.create_model(model_path)
 
     def create_model(self, model_path):
         if model_path:
@@ -86,12 +87,12 @@ class DQNAgent:
 
     def get_action(self, board, player):
         # random action
-        if self.epsilon > random.random() and self.training:
+        if self.epsilon > np.random.random() and self.training:
 
             # choose random action
-            action = random.randint(0, 6)
+            action = np.random.randint(0, 7)
             while not self.game.check_valid_move(action, board):
-                action = random.randint(0, 6)
+                action = np.random.randint(0, 7)
             return action
 
 
@@ -159,7 +160,7 @@ class DQNAgent:
 
     def minimize(self, board, player, depth, alpha, beta):
         if self.game.check_win(board, test=True):
-            return None, None
+            return math.inf, None
         if self.game.is_full(board):
             return None, None
         if depth >= self.max_depth-1:
@@ -257,8 +258,7 @@ class DQNAgent:
         states = [elem[0] for elem in batch]
         new_states = [elem[2] for elem in batch]
         q_vals = self.model.predict(np.array(states), batch_size=self.batch_size)
-        #future_q_vals = self.target_model.predict(np.array(new_states), batch_size=self.batch_size)
-        future_q_vals = self.model.predict(np.array(new_states), batch_size=self.batch_size)
+        future_q_vals = self.target_model.predict(np.array(new_states), batch_size=self.batch_size)
 
         # get q values and update based on reward
         for i, (state, action, new_state, reward, done) in enumerate(batch):
@@ -315,7 +315,6 @@ class DQNAgent:
                 self.epsilon = self.epsilon_reintroduction_value
 
     def update_target_model(self):
-        return
         if len(self.replay_memory) < self.minimum_replay_len:
             return
 

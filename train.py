@@ -14,31 +14,26 @@ def main():
     game = Connect4()
     dqn = DQNAgent(game,
                     model_name="50x7-model1",
-                    max_depth = 3,
                     save_location="./models/50x7/",
                     model_path=None,
                     )
     dqn2 = DQNAgent(game,
                     model_name="50x7-model2",
-                    max_depth = 3,
                     save_location="./models/50x7/",
                     model_path=None,
                     )
     dqn3 = DQNAgent(game,
                     model_name="50x7-model3",
-                    max_depth = 3,
                     save_location="./models/50x7/",
                     model_path=None,
                     )
     dqn4 = DQNAgent(game,
                     model_name="50x7-model4",
-                    max_depth = 3,
                     save_location="./models/50x7/",
                     model_path=None,
                     )
     dqn5 = DQNAgent(game,
                     model_name="50x7-model5",
-                    max_depth = 3,
                     save_location="./models/50x7/",
                     model_path=None,
                     )
@@ -48,7 +43,7 @@ def main():
     players[0] = agents[0]
     players[1] = agents[1]
     render = True
-    episodes = 500000
+    episodes = 120000
     render_period = 250
 
     winner = None
@@ -143,7 +138,7 @@ def main():
     plot_moves_rolling_avg(moves_rolling_avg, rolling_average_period)
 
 def plot_moves_rolling_avg(rolling_avg, rolling_average_period):
-    plt.plot(rolling_avg)
+    plt.scatter(rolling_avg, len(rolling_avg))
     plt.title("Moves Rolling Average")
     plt.xlabel(f"Episodes ({rolling_average_period}'s of games)")
     plt.ylabel("Moves")

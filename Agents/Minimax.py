@@ -1,5 +1,5 @@
 import math
-import random
+import numpy as np
 
 class Minimax:
     def __init__(self, game, max_depth=4):
@@ -307,12 +307,12 @@ class MinimaxDilute(Minimax):
 
     def get_action(self, board, player):
         # take random action
-        if self.dilute > random.random():
+        if self.dilute > np.random.random():
 
             # choose random action
-            action = random.randint(0, 6)
+            action = np.random.randint(0, 7)
             while not self.game.check_valid_move(action, board):
-                action = random.randint(0, 6)
+                action = np.random.randint(0, 7)
             return action
 
         # take minimax action

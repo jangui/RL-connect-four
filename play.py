@@ -8,17 +8,17 @@ import matplotlib.pyplot as plt
 def main():
     game = Connect4()
     random_agent = RandomAgent(game)
-    agent1_model_path = "./models/athena/athena-autosave16000"
+    agent1_model_path = "./models/50x7/50x7-model4-autosave10000"
     #agent1_model_path = None
-    agent1 = DQNAgent(game, training=False, max_depth=5, model_path=agent1_model_path)
-    minimax1 = MinimaxDilute(game, max_depth=2, dilute=0.25)
-    minimax2 = MinimaxDilute(game, max_depth=2, dilute=0.0)
+    agent1 = DQNAgent(game, training=False, max_depth=3, model_path=agent1_model_path)
+    minimax1 = MinimaxDilute(game, max_depth=3, dilute=0.25)
+    minimax2 = MinimaxDilute(game, max_depth=4, dilute=0.03)
     human = Human(game)
 
-    players = [[agent1, 0, 0], [minimax2, 0, 0]]
+    players = [[agent1, 0, 0], [human, 0, 0]]
 
-    render = False
-    games = 2
+    render = True
+    games = 5
 
     for i in range(games):
         print("Game:", i)
