@@ -18,7 +18,7 @@ class DQNAgent:
         #self.replay_mem_size = 20000
         self.replay_mem_size = 5000
         self.replay_memory = deque(maxlen=self.replay_mem_size)
-        self.minimum_replay_len = 1000
+        self.minimum_replay_len = 64
         #self.minimum_replay_len = 5000
         #self.batch_size = 128
         self.batch_size = 64
@@ -47,7 +47,7 @@ class DQNAgent:
         self.debug = 0
 
         # stats settings
-        self.display_stats = True
+        self.stats = False
         self.aggregation_period = 300
         self.current_win_streak = 0
         self.best_win_streak = 0
@@ -86,6 +86,7 @@ class DQNAgent:
         return model
 
     def get_action(self, board, player):
+        """
         # random action
         if self.epsilon > np.random.random() and self.training:
 
@@ -94,6 +95,7 @@ class DQNAgent:
             while not self.game.check_valid_move(action, board):
                 action = np.random.randint(0, 7)
             return action
+        """
 
 
         # get action from network
@@ -215,9 +217,11 @@ class DQNAgent:
             print(f"\n{self.model_name}")
 
         reward = self.reward
+        """
         if win_type == 2:
             # minimal reward for vertical wins
             reward /= 1000
+        """
         for env_info in reversed_data:
             reward_index = 3
             env_info[reward_index] += reward
@@ -237,7 +241,7 @@ class DQNAgent:
             self.replay_memory.append(env_info)
 
             # decrease reward in proportion to actions leading to win
-            reward = round(reward * self.reward_discount, 8)
+            #reward = round(reward * self.reward_discount, 8)
 
     def train(self):
         """
@@ -277,23 +281,22 @@ class DQNAgent:
 
     def post_episode(self):
         self.update_target_model()
-        self.decay_epsilon()
-        self.halt_training()
+        #self.decay_epsilon()
+        #self.halt_training()
 
-        if self.episode % self.aggregation_period == 0:
-            # update aggr stats
-            self.aggregate_wins.append(self.wins)
-            self.aggregate_win_streaks.append(self.best_win_streak)
+        if self.stats:
+            if self.episode % self.aggregation_period == 0:
+                # update aggr stats
+                self.aggregate_wins.append(self.wins)
+                self.aggregate_win_streaks.append(self.best_win_streak)
 
-            # display aggr stats
-            if self.display_stats:
                 self.display_aggregate_stats()
 
-            if self.debug:
-                self.plot_results()
+                if self.debug:
+                    self.plot_results()
 
-            self.save_good_model(self.episode)
-            self.reset_aggregate_stats()
+                self.save_good_model(self.episode)
+                self.reset_aggregate_stats()
 
         # auto save
         if self.episode % self.autosave_period == 0:
@@ -354,27 +357,15 @@ class DQNAgent:
         self.current_win_streak = 0
 
     def plot_results(self):
-        #rolling_average_wins = self.rolling_average(self.aggregate_wins)
         plt.plot(self.aggregate_wins)
         plt.plot(self.aggregate_win_streaks)
-        #plt.plot(rolling_average_wins, color='red', linewidth=0.5)
         plt.title(f"{self.model_name} Aggregate Results")
         plt.xlabel(f"Training Time ({self.aggregation_period}'s of Games)")
         plt.ylabel("Wins")
         plt.legend(["Aggregate Wins", "Best Win Streak"])
-        #plt.legend(["Aggregate Wins", "Best Win Streak", "Rolling Average"])
         plt.show()
         plt.close()
         plt.clf()
-
-    """
-    def rolling_average(self, lst):
-        rolling_avg = []
-        for i in range(len(lst)):
-            avg = int(np.mean(lst[:i+1]))
-            rolling_avg.append(avg)
-        return rolling_avg
-    """
 
     def verbose(self):
         self.debug = (self.debug + 1) % 2

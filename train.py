@@ -13,43 +13,41 @@ from Connect4 import Connect4
 def main():
     game = Connect4()
     dqn = DQNAgent(game,
-                    model_name="50x7-model1",
-                    save_location="./models/50x7/",
+                    model_name="model1",
+                    save_location="./models/no_reward_discount/",
                     model_path=None,
                     )
     dqn2 = DQNAgent(game,
-                    model_name="50x7-model2",
-                    save_location="./models/50x7/",
+                    model_name="model2",
+                    save_location="./models/no_reward_discount/",
                     model_path=None,
                     )
     dqn3 = DQNAgent(game,
-                    model_name="50x7-model3",
-                    save_location="./models/50x7/",
+                    model_name="model3",
+                    save_location="./models/no_reward_discount/",
                     model_path=None,
                     )
+    """
     dqn4 = DQNAgent(game,
-                    model_name="50x7-model4",
-                    save_location="./models/50x7/",
+                    model_name="model4",
+                    save_location="./models/no_epsilon_5/",
                     model_path=None,
                     )
     dqn5 = DQNAgent(game,
-                    model_name="50x7-model5",
-                    save_location="./models/50x7/",
+                    model_name="model5",
+                    save_location="./models/no_epsilon_5/",
                     model_path=None,
                     )
+    """
     #minimax = MinimaxDilute(game, max_depth=3, dilute=0.10)
-    agents = [dqn, dqn2, dqn3, dqn4, dqn5]
+    #agents = [dqn, dqn2, dqn3, dqn4, dqn5]
+    agents = [dqn, dqn2, dqn3]
     players = [None, None]
     players[0] = agents[0]
     players[1] = agents[1]
-    render = True
-    episodes = 120000
+    render = False
+    episodes = 1000000
     render_period = 250
-
-    winner = None
-    moves_count_hist = []
-    moves_rolling_avg = []
-    rolling_average_period = 100
 
     # SIGQUIT (CTRL-/) signal handler
     # this will toggle between verbose player output or not
@@ -63,7 +61,6 @@ def main():
     def finish(signal, frame):
         for agent in agents:
             agent.plot_results()
-        plot_moves_rolling_avg(moves_rolling_avg, rolling_average_period)
         sys.exit(1)
     signal.signal(signal.SIGINT, finish)
 
@@ -75,6 +72,7 @@ def main():
         game.reset()
         training_data = [[],[]]
         player = 0
+        winner = -1
         while not game.done:
             reward = 0
 
@@ -107,10 +105,11 @@ def main():
 
         ### episode finished ###
 
-        if type(winner) != type(None):
+        if  winner != -1:
             print(f"Winner: {players[winner].model_name} ", end='')
+        else:
+            print("Tie! ", end='')
         print(f"Moves: {game.moves}");
-        moves_count_hist.append(game.moves)
 
         # handle post episode events
         # stats, autosaving, etc
@@ -127,23 +126,8 @@ def main():
             # swap player's side
             players.reverse()
 
-        if episode % rolling_average_period == 0:
-            moves_rolling_avg.append(int(np.mean(moves_count_hist)))
-            moves_count_hist = []
-
-
     for p in players:
         p.plot_results()
-
-    plot_moves_rolling_avg(moves_rolling_avg, rolling_average_period)
-
-def plot_moves_rolling_avg(rolling_avg, rolling_average_period):
-    plt.scatter(rolling_avg, len(rolling_avg))
-    plt.title("Moves Rolling Average")
-    plt.xlabel(f"Episodes ({rolling_average_period}'s of games)")
-    plt.ylabel("Moves")
-    plt.show()
-    plt.close()
 
 if __name__ == "__main__":
     main()
